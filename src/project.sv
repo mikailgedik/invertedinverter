@@ -15,7 +15,7 @@ module tt_um_mikailgedik_inverted_inverters (
     input  wire       clk,      // clock
     input  wire       rst_n     // reset_n - low to reset
 );
-  localparam int INVERTERS = 2 * 100 + 1;
+  localparam int INVERTERS = 2 * 1 + 1;
   (* dont_touch = 1 *)
   (* keep = 1 *)
   logic [INVERTERS-1:0] inverter;

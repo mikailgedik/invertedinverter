@@ -17,7 +17,10 @@ module tt_um_mikailgedik_inverted_inverters (
 );
   localparam int INVERTERS = 2 * 100 + 1;
   (* dont_touch = 1 *)
+  (* keep = 1 *)
   logic inverter [INVERTERS-1:0];
+  (* dont_touch = 1 *)
+  (* keep = 1 *)
   logic enable_q;
 
   always_ff @( posedge clk ) begin
@@ -35,10 +38,14 @@ module tt_um_mikailgedik_inverted_inverters (
   generate
     genvar i;
     for (i = 0; i < INVERTERS - 1; i++) begin
+      (* keep = 1 *)
+      (* dont_touch = 1 *)
       assign inverter[i] = ~inverter[i + 1];
     end
   endgenerate
   
+  (* dont_touch = 1 *)
+  (* keep = 1 *)
   assign inverter[INVERTERS - 1] = ~inverter[0] & enable_q;
 
   // List all unused inputs to prevent warnings

@@ -37,7 +37,7 @@ module tt_um_mikailgedik_inverted_inverters (
     input  wire       clk,      // clock
     input  wire       rst_n     // reset_n - low to reset
 );
-  localparam AMOUNT = 2 * 2;
+  localparam AMOUNT = 2 * 400;
   logic enable_q;
   logic connector;
 

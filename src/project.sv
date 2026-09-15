@@ -27,6 +27,20 @@ module inverter_chained #(
   endgenerate
 endmodule
 
+module simple_chain_loop #(
+  parameter int AMOUNT = 1
+) (
+  input logic en,
+  output logic r
+);
+  inverter_chained #(
+    .AMOUNT(AMOUNT)
+  ) mylonginv (
+    .a(en ? r : '0),
+    .y(r)
+  );
+endmodule
+
 module tt_um_mikailgedik_inverted_inverters (
     input  wire [7:0] ui_in,    // Dedicated inputs
     output wire [7:0] uo_out,   // Dedicated outputs
@@ -37,30 +51,47 @@ module tt_um_mikailgedik_inverted_inverters (
     input  wire       clk,      // clock
     input  wire       rst_n     // reset_n - low to reset
 );
-  localparam AMOUNT = 2 * 20 + 1;
+
   logic enable_q;
-  logic connector, connector_q;
+  logic [6:0] r, r_q;
 
   always_ff @( posedge clk ) begin
     if (rst_n) begin
       enable_q <= ui_in[7] ? ui_in[0] : enable_q;
-      connector_q <= connector;
+      r_q <= r;
     end else begin
       enable_q <= '1;
-      connector_q <= '0;
+      r_q <= '0;
     end
   end
 
-  inverter_chained #(
-    .AMOUNT(AMOUNT)
-  ) mylonginv (
-    .a(enable_q ? connector : '0),
-    .y(connector)
+  simple_chain_loop #(
+    .AMOUNT(3)
+  ) chain_loop_0 (
+    .en(enable_q),
+    .r(r[0])
   );
 
-  assign uo_out = { enable_q, 1'b0,1'b0,1'b0,
-                    1'b0,1'b0,1'b0, connector_q };
+  simple_chain_loop #(
+    .AMOUNT(31)
+  ) chain_loop_1 (
+    .en(enable_q),
+    .r(r[1])
+  );
 
+  simple_chain_loop #(
+    .AMOUNT(301)
+  ) chain_loop_2 (
+    .en(enable_q),
+    .r(r[2])
+  );
+
+  assign r[3] = 0;
+  assign r[4] = 0;
+  assign r[5] = 0;
+  assign r[6] = 0;
+
+  assign uo_out = { enable_q, r_q[6:0] };
   // All output pins must be assigned. If not used, assign to 0.
   // assign uo_out  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
   assign uio_out = 0;

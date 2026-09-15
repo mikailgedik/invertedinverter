@@ -20,7 +20,7 @@ module tt_um_mikailgedik_inverted_inverters (
   assign uio_out = 0;
   assign uio_oe  = 0;
 
-  localparam int INVERTERS = 2 * 1 + 1;
+  localparam int INVERTERS = 2 * 1000 + 1;
   (* dont_touch = 1 *)
   (* keep = 1 *)
   logic [INVERTERS-1:0] inverter;

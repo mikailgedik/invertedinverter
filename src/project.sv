@@ -16,6 +16,7 @@ module tt_um_mikailgedik_inverted_inverters (
     input  wire       rst_n     // reset_n - low to reset
 );
   localparam int INVERTERS = 2 * 100 + 1;
+  (* dont_touch = 1 *)
   logic inverter [INVERTERS-1:0];
   logic enable_q;
 

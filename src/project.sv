@@ -18,7 +18,7 @@ module tt_um_mikailgedik_inverted_inverters (
   localparam int INVERTERS = 2 * 100 + 1;
   (* dont_touch = 1 *)
   (* keep = 1 *)
-  logic inverter [INVERTERS-1:0];
+  logic [INVERTERS-1:0] inverter;
   (* dont_touch = 1 *)
   (* keep = 1 *)
   logic enable_q;

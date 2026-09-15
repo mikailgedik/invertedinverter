@@ -37,26 +37,29 @@ module tt_um_mikailgedik_inverted_inverters (
     input  wire       clk,      // clock
     input  wire       rst_n     // reset_n - low to reset
 );
-  localparam AMOUNT = 2 * 400;
+  localparam AMOUNT = 2 * 20 + 1;
   logic enable_q;
-  logic connector;
+  logic connector, connector_q;
 
   always_ff @( posedge clk ) begin
-    if (rst_n)
+    if (rst_n) begin
       enable_q <= ui_in[7] ? ui_in[0] : enable_q;
-    else
+      connector_q <= connector;
+    end else begin
       enable_q <= '1;
+      connector_q <= '0;
+    end
   end
 
   inverter_chained #(
     .AMOUNT(AMOUNT)
   ) mylonginv (
-    .a(~connector & enable_q),
+    .a(enable_q ? connector : '0),
     .y(connector)
   );
 
   assign uo_out = { enable_q, 1'b0,1'b0,1'b0,
-                    1'b0,1'b0,1'b0, connector };
+                    1'b0,1'b0,1'b0, connector_q };
 
   // All output pins must be assigned. If not used, assign to 0.
   // assign uo_out  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in

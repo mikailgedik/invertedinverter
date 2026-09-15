@@ -5,44 +5,25 @@
 
 `default_nettype none
 
-module inverter_chained_16 #(
+module inverter_chained #(
   parameter int AMOUNT = 1
 ) (
   input logic a,
   output logic y
 );
-  logic [15:0] inverter [AMOUNT-1:0];
-  assign inverter[0][0] = a;
+  logic inverter [AMOUNT:0];
+  assign inverter[0] = a;
+  assign y = inverter[AMOUNT];
   generate
     genvar i;
-    for (i = 0; i < AMOUNT - 1; i++) begin
+    for (i = 0; i < AMOUNT; i++) begin
         // specify the inverter standart cell, so that yosys doesn't
         // have a stroke synthesiszing a combinatorial loop
-      sg13g2_inv_16 direct_inv(
-        .A( { inverter[i][0],inverter[i][1],inverter[i][2],inverter[i][3],
-              inverter[i][4],inverter[i][5],inverter[i][6],inverter[i][7],
-              inverter[i][8],inverter[i][9],inverter[i][10],inverter[i][11],
-              inverter[i][12],inverter[i][13],inverter[i][14],inverter[i][15]
-               } ),
-        .Y( { inverter[i][1],inverter[i][2],inverter[i][3],inverter[i][4],
-              inverter[i][5],inverter[i][6],inverter[i][7],inverter[i][8],
-              inverter[i][9],inverter[i][10],inverter[i][11],inverter[i][12],
-              inverter[i][13],inverter[i][14],inverter[i][15],inverter[i+1][0]
-              } )
+      sg13g2_inv_1 direct_inv(
+        .A( inverter[i] ),
+        .Y( inverter[i+1] )
       );
     end
-    sg13g2_inv_16 direct_inv(
-      .A( { inverter[AMOUNT - 1][0],inverter[AMOUNT - 1][1],inverter[AMOUNT - 1][2],inverter[AMOUNT - 1][3],
-            inverter[AMOUNT - 1][4],inverter[AMOUNT - 1][5],inverter[AMOUNT - 1][6],inverter[AMOUNT - 1][7],
-            inverter[AMOUNT - 1][8],inverter[AMOUNT - 1][9],inverter[AMOUNT - 1][10],inverter[AMOUNT - 1][11],
-            inverter[AMOUNT - 1][12],inverter[AMOUNT - 1][13],inverter[AMOUNT - 1][14],inverter[AMOUNT - 1][15]
-              } ),
-      .Y( { inverter[AMOUNT - 1][1],inverter[AMOUNT - 1][2],inverter[AMOUNT - 1][3],inverter[AMOUNT - 1][4],
-            inverter[AMOUNT - 1][5],inverter[AMOUNT - 1][6],inverter[AMOUNT - 1][7],inverter[AMOUNT - 1][8],
-            inverter[AMOUNT - 1][9],inverter[AMOUNT - 1][10],inverter[AMOUNT - 1][11],inverter[AMOUNT - 1][12],
-            inverter[AMOUNT - 1][13],inverter[AMOUNT - 1][14],inverter[AMOUNT - 1][15],y
-            } )
-    );
   endgenerate
 endmodule
 
@@ -56,10 +37,10 @@ module tt_um_mikailgedik_inverted_inverters (
     input  wire       clk,      // clock
     input  wire       rst_n     // reset_n - low to reset
 );
-  localparam AMOUNT = 400;
+  localparam AMOUNT = 7000;
   logic enable_q;
   logic connector;
-  
+
   always_ff @( posedge clk ) begin
     if (rst_n)
       enable_q <= ui_in[7] ? ui_in[0] : enable_q;
@@ -68,7 +49,7 @@ module tt_um_mikailgedik_inverted_inverters (
   end
 
 
-  inverter_chained_16 #(
+  inverter_chained #(
     .AMOUNT(AMOUNT)
   ) mylonginv (
     .a(~connector & enable_q),

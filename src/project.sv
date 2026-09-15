@@ -42,7 +42,7 @@ module tt_um_mikailgedik_inverted_inverters (
     end
   endgenerate
   
-  assign inverter[INVERTERS - 1] = ~inverter[0] & enable_q;
+  assign inverter[INVERTERS - 1] = enable_q ? ~inverter[0] : '0;
 
   // List all unused inputs to prevent warnings
   wire _unused = &{ena, clk, rst_n, 1'b0};

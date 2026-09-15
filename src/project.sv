@@ -15,6 +15,11 @@ module tt_um_mikailgedik_inverted_inverters (
     input  wire       clk,      // clock
     input  wire       rst_n     // reset_n - low to reset
 );
+  // All output pins must be assigned. If not used, assign to 0.
+  // assign uo_out  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
+  assign uio_out = 0;
+  assign uio_oe  = 0;
+
   localparam int INVERTERS = 2 * 1 + 1;
   (* dont_touch = 1 *)
   (* keep = 1 *)
@@ -29,16 +34,16 @@ module tt_um_mikailgedik_inverted_inverters (
     else
       enable_q <= '1;
   end
-  // All output pins must be assigned. If not used, assign to 0.
-  // assign uo_out  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
-  assign uio_out = 0;
-  assign uio_oe  = 0;
+
   assign uo_out = inverter[7:0];
 
   generate
     genvar i;
     for (i = 0; i < INVERTERS - 1; i++) begin
-      assign inverter[i] = ~inverter[i + 1];
+      sg13g2_inv_1 direct_inv(
+        .A( ~inverter[i + 1]),
+        .Y(inverter[i])
+      );
     end
   endgenerate
   

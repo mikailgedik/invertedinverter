@@ -5,6 +5,36 @@
 
 `default_nettype none
 
+`ifdef SIM
+
+module sg13g2_inv_1 direct_inv(
+  wire A,
+  wire Y
+);
+
+  assign Y = ~A;
+
+endmodule
+
+module sg13g2_nor2_1 direct_inv(
+  wire A,
+  wire B,
+  wire Y
+);
+  assign Y = ~(A | B);
+endmodule
+
+module sg13g2_mux2_1 direct_inv(
+  wire A0,
+  wire A1,
+  wire S,
+  wire X
+);
+  assign X = S ? A1 : A0;
+endmodule
+
+`endif // SIM
+
 module inverter_chained #(
   parameter int AMOUNT = 1
 ) (

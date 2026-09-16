@@ -181,10 +181,10 @@ module puf_1 #(
       );
 
       sg13g2_mux2_1 mux (
-        .A(input_a),
-        .B(input_b),
+        .A0(input_a),
+        .A1(input_b),
         .S(cfg[i]),
-        .Y(intermediate[i])
+        .X(intermediate[i])
       );
     end
   endgenerate

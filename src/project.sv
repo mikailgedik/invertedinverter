@@ -381,11 +381,11 @@ module multi_loops_intervined_2 #(
 
   always_ff @( posedge clk ) begin
     if (rst_n) begin
-      matrix_0 = matrix0_inter[0] ^ matrix0_inter[1] ^ matrix0_inter[2] ^ matrix0_inter[3];
-      matrix_1 = matrix_0 ^ matrix1_inter[1] ^ matrix1_inter[2];
+      matrix_0 <= matrix0_inter[0] ^ matrix0_inter[1] ^ matrix0_inter[2] ^ matrix0_inter[3];
+      matrix_1 <= matrix_0 ^ matrix1_inter[1] ^ matrix1_inter[2];
     end else begin
-      matrix_0 = '0;
-      matrix_1 = '0;
+      matrix_0 <= '0;
+      matrix_1 <= '0;
     end
   end
   assign r = matrix_1;
@@ -530,6 +530,19 @@ module tt_um_mikailgedik_inverted_inverters (
     .AMOUNT(301) // Odd
   ) chain_loop_2 (
     .en(conf[2]),
+    .r(r[0][2])
+
+    `ifdef TESTING
+    ,.clk(clk),
+    .rst_n(rst_n)
+    `endif
+
+  );
+
+    simple_chain_loop #(
+    .AMOUNT(1001) // Odd
+  ) chain_loop_3 (
+    .en(conf[3]),
     .r(r[0][2])
 
     `ifdef TESTING

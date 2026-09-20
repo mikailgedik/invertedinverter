@@ -501,62 +501,80 @@ module tt_um_mikailgedik_inverted_inverters (
   // List all unused inputs to prevent warnings
   wire _unused = &{ena, clk, rst_n, 1'b0};
 
-  // simple_chain_loop #(
-  //   .AMOUNT(3) // Odd
-  // ) chain_loop_0 (
-  //   .en(conf[0]),
-  //   .r(r[0][0])
+  simple_chain_loop #(
+    .AMOUNT(3) // Odd
+  ) chain_loop_0 (
+    .en(conf[0]),
+    .r(r[0][0])
 
-  //   `ifdef TESTING
-  //   ,.clk(clk),
-  //   .rst_n(rst_n)
-  //   `endif
-  // );
+    `ifdef TESTING
+    ,.clk(clk),
+    .rst_n(rst_n)
+    `endif
+  );
 
-  // simple_chain_loop #(
-  //   .AMOUNT(31) // Odd
-  // ) chain_loop_1 (
-  //   .en(conf[1]),
-  //   .r(r[0][1])
-  // );
+  simple_chain_loop #(
+    .AMOUNT(31) // Odd
+  ) chain_loop_1 (
+    .en(conf[1]),
+    .r(r[0][1])
 
-  // simple_chain_loop #(
-  //   .AMOUNT(301) // Odd
-  // ) chain_loop_2 (
-  //   .en(conf[2]),
-  //   .r(r[0][2])
-  // );
+    `ifdef TESTING
+    ,.clk(clk),
+    .rst_n(rst_n)
+    `endif
 
-  // multi_loops_intervined_1 #(
-  //   .L1(1),
-  //   .L2(3), // Odd
-  //   // Even: One further XOR between L1 and L2
-  //   .L3(1) // Odd
-  // ) intervined_1 (
-  //   .en(conf[4]),
-  //   .r(r[0][3])
-  // );
+  );
 
-  // multi_loops_intervined_2 #(
-  //   .L1(1),
-  //   .L2(3),
-  //   .L3(5),
-  //   .L4(7),
-  //   .L5(11),
-  //   .L6(13)
-  // ) intervined_2 (
-  //   .clk(clk),
-  //   .rst_n(rst_n),
-  //   .en(conf[5]),
-  //   .r(r[0][4])
-  // );
-  // 
-  // assign r[0][5] = '0;
-  // assign r[0][6] = '0;
-  // assign r[0][7] = '0;
-  // 
+  simple_chain_loop #(
+    .AMOUNT(301) // Odd
+  ) chain_loop_2 (
+    .en(conf[2]),
+    .r(r[0][2])
+
+    `ifdef TESTING
+    ,.clk(clk),
+    .rst_n(rst_n)
+    `endif
+
+  );
+
+  multi_loops_intervined_1 #(
+    .L1(1),
+    .L2(3), // Odd
+    // Even: One further XOR between L1 and L2
+    .L3(1) // Odd
+  ) intervined_1 (
+    .en(conf[4]),
+    .r(r[0][3])
+
+    `ifdef TESTING
+    ,.clk(clk),
+    .rst_n(rst_n)
+    `endif
+
+  );
+
+  multi_loops_intervined_2 #(
+    .L1(1),
+    .L2(3),
+    .L3(5),
+    .L4(7),
+    .L5(11),
+    .L6(13)
+  ) intervined_2 (
+    .clk(clk),
+    .rst_n(rst_n),
+    .en(conf[5]),
+    .r(r[0][4])
+  );
+  
+  assign r[0][5] = '0;
+  assign r[0][6] = '0;
+  assign r[0][7] = '0;
+  
   generate
-    for (i = 0; i < 1; i++) begin: pufs
+    for (i = 0; i < 8; i++) begin: pufs
       puf_1 #(
         // Has to be even!
         .RINGSIZE(8*i + 8)
@@ -574,23 +592,24 @@ module tt_um_mikailgedik_inverted_inverters (
     end
   endgenerate
 
-  assign r[0][0] = 0;
-  assign r[0][1] = 0;
-  assign r[0][2] = 0;
-  assign r[0][3] = 0;
-  assign r[0][4] = 0;
-  assign r[0][5] = 0;
-  assign r[0][6] = 0;
-  assign r[0][7] = 0;
+  // To speed up tests, disable some RNGs
+  // assign r[0][0] = 0;
+  // assign r[0][1] = 0;
+  // assign r[0][2] = 0;
+  // assign r[0][3] = 0;
+  // assign r[0][4] = 0;
+  // assign r[0][5] = 0;
+  // assign r[0][6] = 0;
+  // assign r[0][7] = 0;
 
   // assign r[0][0] = 0;
-  assign r[1][1] = 0;
-  assign r[1][2] = 0;
-  assign r[1][3] = 0;
-  assign r[1][4] = 0;
-  assign r[1][5] = 0;
-  assign r[1][6] = 0;
-  assign r[1][7] = 0;
+  // assign r[1][1] = 0;
+  // assign r[1][2] = 0;
+  // assign r[1][3] = 0;
+  // assign r[1][4] = 0;
+  // assign r[1][5] = 0;
+  // assign r[1][6] = 0;
+  // assign r[1][7] = 0;
   
   generate
     for(i = 0; i < REGS; i++) begin: regs

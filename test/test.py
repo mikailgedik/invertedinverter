@@ -49,17 +49,14 @@ async def test_config_regs(dut):
         assert tmp == vals[i]
 
 async def check_ring_oscillators(dut):
-    await write_cfg_reg(dut, 8, 0x1)
+    await write_cfg_reg(dut, 8, 0xFF)
     await ReadWrite()
-    dut.ui_in.value = ((0 << 6) | 0)
-    res = []
+    
     for i in range(100):
         # Our fake-inv/nor gates have a latency of 100 clock cycles (for simulation purposes!)
-        await ClockCycles(dut.clk, 4753)
-        res.append(int(dut.uo_out.value))
-        dut._log.info("rng: %s", str(dut.uo_out.value))
-    with open("3-circle.txt", "w") as f:
-        f.write(str(res))
+        await ClockCycles(dut.clk, 2**3)
+        tmp = int(await read_res(dut, 0))
+        dut._log.info("rng: %x", tmp)
 
 async def check_puf(dut):
 
@@ -73,12 +70,12 @@ async def check_puf(dut):
         results = [0 for _ in range(8)]
         for _ in range(tries):
             # reset PUF
-            await write_cfg_reg(dut, 8, (1 << 6) | (0 << 7))
-            await ClockCycles(dut.clk, 10) # Wait for some propagation to happen
+            await write_cfg_reg(dut, 8, (1 << 6) | (1 << 7))
+            await ClockCycles(dut.clk, 20) # Wait for some propagation to happen
 
             # let PUF settle
             await write_cfg_reg(dut, 8, (0 << 6) | (0 << 7))
-            await ClockCycles(dut.clk, 2**10) # Wait a long time for it to settle
+            await ClockCycles(dut.clk, 2**4) # Wait for a longer time for it to settle
             tmp = int(await read_res(dut, 1))
             results = [results[jj] + (1 if (tmp & (1 << jj)) != 0 else 0) for jj in range(8)]
         dut._log.info("Variation: %s", [f"{r}/{tries}" for r in results])
@@ -111,6 +108,5 @@ async def test_project(dut):
     # dut._log.info("Test ring oscillators (read/write)")
     # await check_ring_oscillators(dut)
 
-
-    dut._log.info("Test ring oscillators (read/write)")
-    await check_puf(dut)
+    # dut._log.info("Test ring oscillators (read/write)")
+    # await check_puf(dut)

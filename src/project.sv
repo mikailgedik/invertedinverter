@@ -5,30 +5,169 @@
 
 `default_nettype none
 
-`ifdef SIM
+`ifdef TESTING
 
-module sg13g2_inv_1 direct_inv(
-  wire A,
-  wire Y
+function longint rol64(longint x, longint k);
+	return (x << k) | (x >> (64 - k));
+endfunction
+
+
+typedef struct packed {
+	longint s0;
+  longint s1;
+	longint s2;
+	longint s3;
+} Xoshiro256ssState;
+
+typedef struct packed {
+	Xoshiro256ssState state;
+  longint result;
+} Xoshiro256ssResult;
+
+
+function Xoshiro256ssResult xoshiro256ss(Xoshiro256ssState state);
+  longint result;
+  longint t;
+  Xoshiro256ssResult res;
+
+	result = rol64(state.s1 * 5, 7) * 9;
+	t = state.s1 << 17;
+
+	state.s2 ^= state.s0;
+	state.s3 ^= state.s1;
+	state.s1 ^= state.s2;
+	state.s0 ^= state.s3;
+
+	state.s2 ^= t;
+	state.s3 = rol64(state.s3, 45);
+
+  res = { state, result };
+	return res;
+endfunction
+
+function Xoshiro256ssResult initialize_from_32(int seed);
+  Xoshiro256ssResult res;
+
+  res.state = { (seed ^ 32'h43baba) * (seed ^ 32'habcd234), 192'h0, (seed ^ 32'h43baba) * (seed ^ 32'habcd234) };
+  for(int i = 0; i < 10; i++) begin
+    res = xoshiro256ss(res.state);
+  end
+	return res;
+endfunction
+
+
+// This module adds a synthetical delay of n clock cycles to the input
+// It is also schmitt-triggered
+// It is used to be able to simulate cirucal loops of logic (e.g. a circle of inverters)
+// Every delay receives a seed value, so that runs are reporducible
+// Every synthetical delay is also changed every time the output switches
+// to simulate a little thermal variation etc.
+module synthetical_delay(
+  input wire A,
+  output logic Y,
+  input wire clk,
+  input wire rst_n,
+  input wire [31:0] rng_start
+);
+  logic [7:0] counter_q, counter_d, fixed_delay, lower_bound, upper_bound, offset;
+  Xoshiro256ssResult rng_state, new_rng_state, initial_rng_state;
+  localparam int MAX = 10;
+  assign offset = 8'(rng_state.result);
+  assign lower_bound = 8'(2) - (offset % 2) + fixed_delay;
+  assign upper_bound = 8'(MAX - 2) + (offset % 2) - fixed_delay;
+  assign new_rng_state = xoshiro256ss(rng_state.state);
+  assign initial_rng_state = initialize_from_32(rng_start);
+  
+  always_comb begin
+    counter_d = counter_q;
+    if(A) begin
+      if(counter_q < 8'(MAX)) counter_d = counter_q + 1;
+    end else begin
+      if(counter_q != 0) counter_d = counter_q - 1;
+    end
+  end
+  always_ff @( posedge clk ) begin
+    if(rst_n) begin
+      counter_q <= counter_d;
+      if (counter_q <= lower_bound) begin
+        Y <= 0;
+        rng_state <= new_rng_state;
+      end else if (counter_q >= upper_bound) begin
+        Y <= 1;
+        rng_state <= new_rng_state;
+      end else begin
+        Y <= Y;
+        rng_state <= rng_state;
+      end
+      fixed_delay <= fixed_delay;
+    end else begin
+      counter_q <= '0;
+      Y <= '0;
+      rng_state <= initial_rng_state;
+      fixed_delay <= 8'(initial_rng_state.result % 2);
+    end
+  end
+  initial begin
+    // int kappa;
+    // kappa = 1;
+    // for(int i = 0; i < 10; i++) begin
+    //   kappa = `weird_hash(kappa);
+    //   $display("%x", kappa);
+    // end
+    for(int i = 0; i < 102; i++) @(posedge clk);
+    $display("Synthetic delay with seed %x %d %d %d", rng_start, offset, fixed_delay, lower_bound, upper_bound);
+    // forever begin
+    //   @(posedge clk);
+    //   $display("%d %d %x %b %b", lower_bound, upper_bound, counter_q, A, Y);
+    // end
+    
+  end
+endmodule
+
+module sg13g2_inv_1(
+  input wire A,
+  output logic Y
+
+  // Only for testing!!!!!
+  , input wire clk,
+  input wire rst_n,
+  input wire [31:0] rng_start
 );
 
-  assign Y = ~A;
+  synthetical_delay delay(
+    .A(~A),
+    .Y(Y),
+    .clk(clk),
+    .rst_n(rst_n),
+    .rng_start(rng_start)
+  );
 
 endmodule
 
-module sg13g2_nor2_1 direct_inv(
-  wire A,
-  wire B,
-  wire Y
+module sg13g2_nor2_1(
+  input wire A,
+  input wire B,
+  output logic Y
+
+  // Only for testing!!!!!
+  , input wire clk,
+  input wire rst_n,
+  input wire [31:0] rng_start
 );
-  assign Y = ~(A | B);
+  synthetical_delay delay(
+    .A(~(A | B)),
+    .Y(Y),
+    .clk(clk),
+    .rst_n(rst_n),
+    .rng_start(rng_start)
+  );
 endmodule
 
-module sg13g2_mux2_1 direct_inv(
-  wire A0,
-  wire A1,
-  wire S,
-  wire X
+module sg13g2_mux2_1(
+  input wire A0,
+  input wire A1,
+  input wire S,
+  output wire X
 );
   assign X = S ? A1 : A0;
 endmodule
@@ -36,10 +175,15 @@ endmodule
 `endif // SIM
 
 module inverter_chained #(
-  parameter int AMOUNT = 1
+  parameter int AMOUNT = 3
 ) (
   input logic a,
   output logic y
+
+  `ifdef TESTING
+  , input wire clk,
+  input wire rst_n
+  `endif // TESTING
 );
   logic inverter [AMOUNT:0];
   assign inverter[0] = a;
@@ -52,6 +196,14 @@ module inverter_chained #(
       sg13g2_inv_1 direct_inv(
         .A( inverter[i] ),
         .Y( inverter[i+1] )
+
+        `ifdef TESTING
+        ,.clk(clk),
+        .rst_n(rst_n),
+
+        .rng_start(32'(i))
+        `endif // TESTING
+
       );
     end
   endgenerate
@@ -62,12 +214,22 @@ module simple_chain_loop #(
 ) (
   input logic en,
   output logic r
+
+  `ifdef TESTING
+  , input wire clk,
+  input wire rst_n
+  `endif // TESTING
 );
   inverter_chained #(
     .AMOUNT(AMOUNT)
   ) mylonginv (
     .a(en ? r : '0),
     .y(r)
+
+    `ifdef TESTING
+    ,.clk(clk),
+    .rst_n(rst_n)
+    `endif // TESTING
   );
 endmodule
 
@@ -78,6 +240,11 @@ module multi_loops_intervined_1 #(
 ) (
   input logic en,
   output logic r
+
+  `ifdef TESTING
+  , input wire clk,
+  input wire rst_n
+  `endif // TESTING
 );
   logic int1, int2, int3;
   inverter_chained #(
@@ -85,12 +252,21 @@ module multi_loops_intervined_1 #(
   ) inv1_i (
     .a(int1),
     .y(int2)
+    `ifdef TESTING
+    ,.clk(clk),
+    .rst_n(rst_n)
+    `endif // TESTING
+
   );
   inverter_chained #(
     .AMOUNT(L2)
   ) inv2_i (
     .a(int1),
     .y(int3)
+    `ifdef TESTING
+    ,.clk(clk),
+    .rst_n(rst_n)
+    `endif // TESTING
   );
 
   inverter_chained #(
@@ -98,6 +274,10 @@ module multi_loops_intervined_1 #(
   ) inv3_i (
     .a(en ? (int2 ^ int3): '0),
     .y(int1)
+    `ifdef TESTING
+    ,.clk(clk),
+    .rst_n(rst_n)
+    `endif // TESTING
   );
   assign r = int1;
 endmodule
@@ -123,24 +303,44 @@ module multi_loops_intervined_2 #(
   ) inv0_i (
     .a(en ? matrix0_inter[0] : '0),
     .y(matrix0_inter[0])
+    `ifdef TESTING
+    ,.clk(clk),
+    .rst_n(rst_n)
+    `endif // TESTING
+
   );
   inverter_chained #(
     .AMOUNT(L1)
   ) inv1_i (
     .a(en ? matrix0_inter[1] : '0),
     .y(matrix0_inter[1])
+    `ifdef TESTING
+    ,.clk(clk),
+    .rst_n(rst_n)
+    `endif // TESTING
+
   );
   inverter_chained #(
     .AMOUNT(L2)
   ) inv2_i (
     .a(en ? matrix0_inter[2] : '0),
     .y(matrix0_inter[2])
+    `ifdef TESTING
+    ,.clk(clk),
+    .rst_n(rst_n)
+    `endif // TESTING
+
   );
   inverter_chained #(
     .AMOUNT(L3)
   ) inv3_i (
     .a(en ? matrix0_inter[3] : '0),
     .y(matrix0_inter[3])
+    `ifdef TESTING
+    ,.clk(clk),
+    .rst_n(rst_n)
+    `endif // TESTING
+
   );
   
   logic [3:0] matrix1_inter;
@@ -150,18 +350,33 @@ module multi_loops_intervined_2 #(
   ) inv4_i (
     .a(en ? matrix1_inter[0] : '0),
     .y(matrix1_inter[0])
+    `ifdef TESTING
+    ,.clk(clk),
+    .rst_n(rst_n)
+    `endif // TESTING
+
   );
   inverter_chained #(
     .AMOUNT(L5)
   ) inv5_i (
     .a(en ? matrix1_inter[1] : '0),
     .y(matrix1_inter[1])
+    `ifdef TESTING
+    ,.clk(clk),
+    .rst_n(rst_n)
+    `endif // TESTING
+
   );
   inverter_chained #(
     .AMOUNT(L6)
   ) inv6_i (
     .a(en ? matrix1_inter[2] : '0),
     .y(matrix1_inter[2])
+    `ifdef TESTING
+    ,.clk(clk),
+    .rst_n(rst_n)
+    `endif // TESTING
+
   );
 
   always_ff @( posedge clk ) begin
@@ -182,9 +397,15 @@ module puf_1 #(
   // Has to be even!
   parameter int RINGSIZE = 2
 ) (
-  input logic rst_n,
+  input logic rst,
   input logic [RINGSIZE-1:0] cfg,
   output logic r
+
+  `ifdef TESTING
+  , input wire clk,
+  input wire rst_n
+  `endif // TESTING
+
 );
 
   logic [RINGSIZE:0] intermediate;
@@ -192,6 +413,7 @@ module puf_1 #(
   generate
     genvar i;
     assign intermediate[RINGSIZE] = intermediate[0];
+    
     assign r = intermediate[0];
     for(i = 0; i < RINGSIZE; i++) begin
       // TODO why are the demuxes needed?!
@@ -201,18 +423,33 @@ module puf_1 #(
       assign input_b = cfg[i] ? intermediate [i + 1] : '0;
       sg13g2_nor2_1 nor_a (
         .A(input_a),
-        .B(~rst_n),
+        .B(rst),
         .Y(out_a)
+
+        `ifdef TESTING
+        ,.clk(clk),
+        .rst_n(rst_n),
+
+        .rng_start(32'(i))
+        `endif // TESTING
+
       );
       sg13g2_nor2_1 nor_b (
         .A(input_b),
-        .B(~rst_n),
+        .B(rst),
         .Y(out_b)
+
+        `ifdef TESTING
+        ,.clk(clk),
+        .rst_n(rst_n),
+
+        .rng_start(32'(i + RINGSIZE))
+        `endif // TESTING
       );
 
       sg13g2_mux2_1 mux (
-        .A0(input_a),
-        .A1(input_b),
+        .A0(out_a),
+        .A1(out_b),
         .S(cfg[i]),
         .X(intermediate[i])
       );
@@ -246,7 +483,7 @@ module tt_um_mikailgedik_inverted_inverters (
 
   generate
     genvar i;
-    for (i = 0; i < MAX_RINGSIZE; i++ ) begin
+    for (i = 0; i < MAX_RINGSIZE; i++ ) begin: cfg_gen
       assign cfg[i] = config_q[i / 8][i % 8];
     end
   endgenerate
@@ -264,74 +501,105 @@ module tt_um_mikailgedik_inverted_inverters (
   // List all unused inputs to prevent warnings
   wire _unused = &{ena, clk, rst_n, 1'b0};
 
-  simple_chain_loop #(
-    .AMOUNT(3) // Odd
-  ) chain_loop_0 (
-    .en(conf[0]),
-    .r(r[0][0])
-  );
+  // simple_chain_loop #(
+  //   .AMOUNT(3) // Odd
+  // ) chain_loop_0 (
+  //   .en(conf[0]),
+  //   .r(r[0][0])
 
-  simple_chain_loop #(
-    .AMOUNT(31) // Odd
-  ) chain_loop_1 (
-    .en(conf[1]),
-    .r(r[0][1])
-  );
+  //   `ifdef TESTING
+  //   ,.clk(clk),
+  //   .rst_n(rst_n)
+  //   `endif
+  // );
 
-  simple_chain_loop #(
-    .AMOUNT(301) // Odd
-  ) chain_loop_2 (
-    .en(conf[2]),
-    .r(r[0][2])
-  );
+  // simple_chain_loop #(
+  //   .AMOUNT(31) // Odd
+  // ) chain_loop_1 (
+  //   .en(conf[1]),
+  //   .r(r[0][1])
+  // );
 
-  multi_loops_intervined_1 #(
-    .L1(1),
-    .L2(3), // Odd
-    // Even: One further XOR between L1 and L2
-    .L3(1) // Odd
-  ) intervined_1 (
-    .en(conf[4]),
-    .r(r[0][3])
-  );
+  // simple_chain_loop #(
+  //   .AMOUNT(301) // Odd
+  // ) chain_loop_2 (
+  //   .en(conf[2]),
+  //   .r(r[0][2])
+  // );
 
-  multi_loops_intervined_2 #(
-    .L1(1),
-    .L2(3),
-    .L3(5),
-    .L4(7),
-    .L5(11),
-    .L6(13)
-  ) intervined_2 (
-    .clk(clk),
-    .rst_n(rst_n),
-    .en(conf[5]),
-    .r(r[0][4])
-  );
-  
-  assign r[0][5] = '0;
-  assign r[0][6] = '0;
-  assign r[0][7] = '0;
-  
+  // multi_loops_intervined_1 #(
+  //   .L1(1),
+  //   .L2(3), // Odd
+  //   // Even: One further XOR between L1 and L2
+  //   .L3(1) // Odd
+  // ) intervined_1 (
+  //   .en(conf[4]),
+  //   .r(r[0][3])
+  // );
+
+  // multi_loops_intervined_2 #(
+  //   .L1(1),
+  //   .L2(3),
+  //   .L3(5),
+  //   .L4(7),
+  //   .L5(11),
+  //   .L6(13)
+  // ) intervined_2 (
+  //   .clk(clk),
+  //   .rst_n(rst_n),
+  //   .en(conf[5]),
+  //   .r(r[0][4])
+  // );
+  // 
+  // assign r[0][5] = '0;
+  // assign r[0][6] = '0;
+  // assign r[0][7] = '0;
+  // 
   generate
-    for (i = 0; i < 8; i++ ) begin
+    for (i = 0; i < 1; i++) begin: pufs
       puf_1 #(
         // Has to be even!
         .RINGSIZE(8*i + 8)
       ) puf_i (
-        .rst_n(conf[6 + i/4]),
+        .rst(conf[6 + i/4]),
         .cfg(cfg[(i*8 + 8)-1:0]),
         .r(r[1][i])
+
+        `ifdef TESTING
+        ,.clk(clk),
+        .rst_n(rst_n)
+        `endif
+
       );
     end
   endgenerate
 
+  assign r[0][0] = 0;
+  assign r[0][1] = 0;
+  assign r[0][2] = 0;
+  assign r[0][3] = 0;
+  assign r[0][4] = 0;
+  assign r[0][5] = 0;
+  assign r[0][6] = 0;
+  assign r[0][7] = 0;
+
+  // assign r[0][0] = 0;
+  assign r[1][1] = 0;
+  assign r[1][2] = 0;
+  assign r[1][3] = 0;
+  assign r[1][4] = 0;
+  assign r[1][5] = 0;
+  assign r[1][6] = 0;
+  assign r[1][7] = 0;
+  
   generate
-    for(i = 0; i < REGS; i++) begin
+    for(i = 0; i < REGS; i++) begin: regs
       always_ff @( posedge clk ) begin
         if(rst_n) begin
-          if(address == i && we) config_q[i] <= data_i;
-          else config_q[i] <= config_q[i];
+          if(address == i && we) begin
+            config_q[i] <= data_i;
+          end
+          else begin config_q[i] <= config_q[i]; end
         end else begin
           config_q[i] <= '0;
         end

@@ -587,20 +587,24 @@ module tt_um_mikailgedik_inverted_inverters (
   
   generate
     for (i = 0; i < 8; i++) begin: pufs
-      puf_1 #(
-        // Has to be even!
-        .RINGSIZE(8*i + 8)
-      ) puf_i (
-        .rst(conf[6 + i/4]),
-        .cfg(cfg[(i*8 + 8)-1:0]),
-        .r(r[1][i])
+    // Save some area :(
+      if(i != 2 && i != 4 && i != 6) begin
+        puf_1 #(
+          // Has to be even!
+          .RINGSIZE(8*i + 8)
+        ) puf_i (
+          .rst(conf[6 + i/4]),
+          .cfg(cfg[(i*8 + 8)-1:0]),
+          .r(r[1][i])
 
-        `ifdef TESTING
-        ,.clk(clk),
-        .rst_n(rst_n)
-        `endif
-
-      );
+          `ifdef TESTING
+          ,.clk(clk),
+          .rst_n(rst_n)
+          `endif
+        );
+      end else begin
+        assign r[1][i] = '0;
+      end
     end
   endgenerate
 

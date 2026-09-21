@@ -343,7 +343,7 @@ module multi_loops_intervined_2 #(
 
   );
   
-  logic [3:0] matrix1_inter;
+  logic [2:0] matrix1_inter;
   logic matrix_1;
   inverter_chained #(
     .AMOUNT(L4)
@@ -382,7 +382,7 @@ module multi_loops_intervined_2 #(
   always_ff @( posedge clk ) begin
     if (rst_n) begin
       matrix_0 <= matrix0_inter[0] ^ matrix0_inter[1] ^ matrix0_inter[2] ^ matrix0_inter[3];
-      matrix_1 <= matrix_0 ^ matrix1_inter[1] ^ matrix1_inter[2];
+      matrix_1 <= matrix_0 ^ matrix1_inter[0] ^ matrix1_inter[1] ^ matrix1_inter[2];
     end else begin
       matrix_0 <= '0;
       matrix_1 <= '0;

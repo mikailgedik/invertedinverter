@@ -543,7 +543,7 @@ module tt_um_mikailgedik_inverted_inverters (
     .AMOUNT(1001) // Odd
   ) chain_loop_3 (
     .en(conf[3]),
-    .r(r[0][2])
+    .r(r[0][3])
 
     `ifdef TESTING
     ,.clk(clk),
@@ -559,7 +559,7 @@ module tt_um_mikailgedik_inverted_inverters (
     .L3(1) // Odd
   ) intervined_1 (
     .en(conf[4]),
-    .r(r[0][3])
+    .r(r[0][4])
 
     `ifdef TESTING
     ,.clk(clk),
@@ -579,10 +579,9 @@ module tt_um_mikailgedik_inverted_inverters (
     .clk(clk),
     .rst_n(rst_n),
     .en(conf[5]),
-    .r(r[0][4])
+    .r(r[0][5])
   );
   
-  assign r[0][5] = '0;
   assign r[0][6] = '0;
   assign r[0][7] = '0;
   

@@ -527,7 +527,7 @@ module tt_um_mikailgedik_inverted_inverters (
   );
 
   simple_chain_loop #(
-    .AMOUNT(301) // Odd
+    .AMOUNT(101) // Odd
   ) chain_loop_2 (
     .en(conf[2]),
     .r(r[0][2])
@@ -540,7 +540,7 @@ module tt_um_mikailgedik_inverted_inverters (
   );
 
     simple_chain_loop #(
-    .AMOUNT(1001) // Odd
+    .AMOUNT(301) // Odd
   ) chain_loop_3 (
     .en(conf[3]),
     .r(r[0][3])

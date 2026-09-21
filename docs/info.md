@@ -18,6 +18,8 @@ That counter is used to give it schmitt-trigger like behaviour, so to simulate a
 
 Since the sim takes forever for the rng-stuff, we only test it locally and remotely we only check whether the registers work correctly
 
+Gatelevel simulation cannot work, since we have combinatorial loops! It is therefore disabled
+
 ## External hardware
 
 Not really
